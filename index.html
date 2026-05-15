@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pace Chart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131a;
+      --border:    #1e1e2e;
+      --accent:    #e8ff47;
+      --accent2:   #47ffe8;
+      --text:      #e4e4f0;
+      --muted:     #4a4a6a;
+      --highlight: #1a1a2e;
+      --row-hover: #16162a;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 860px;
+      margin-bottom: 2.5rem;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 0.25rem;
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.8rem, 8vw, 5rem);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    label {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .toggle-btn {
+      padding: 0.45rem 0.9rem;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-right: 1px solid var(--border);
+    }
+
+    .toggle-btn:last-child { border-right: none; }
+
+    .toggle-btn.active {
+      background: var(--accent);
+      color: #0a0a0f;
+    }
+
+
+    /* ── Table wrapper ── */
+    .table-wrap {
+      width: 100%;
+      max-width: 860px;
+      height: 65vh;
+      min-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      position: relative;
+      /* subtle inner glow */
+      box-shadow: inset 0 0 60px rgba(232,255,71,0.02);
+    }
+
+    /* custom scrollbar */
+    .table-wrap::-webkit-scrollbar { width: 6px; }
+    .table-wrap::-webkit-scrollbar-track { background: var(--surface); }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    thead tr {
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    th {
+      padding: 0.85rem 1.1rem;
+      text-align: right;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    th:first-child { text-align: left; }
+
+    /* distance column headers coloring */
+    th.col-5k    { color: #7eb8ff; }
+    th.col-10k   { color: #ff9f7e; }
+    th.col-half  { color: #b07eff; }
+    th.col-mara  { color: var(--accent2); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+      cursor: default;
+    }
+
+    tbody tr:hover { background: var(--row-hover); }
+
+    tbody tr.minute-mark {
+      background: #0f1a1f;
+      border-left: 3px solid var(--accent2);
+    }
+
+    tbody tr.minute-mark td:first-child {
+      color: var(--accent2);
+    }
+
+    tbody tr.highlighted {
+      background: #1c2600;
+      border-left: 3px solid var(--accent);
+    }
+
+    tbody tr.highlighted td:first-child {
+      color: var(--accent);
+    }
+
+    td {
+      padding: 0.65rem 1.1rem;
+      text-align: right;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    td:first-child {
+      text-align: left;
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    td.col-5k    { color: #7eb8ff; }
+    td.col-10k   { color: #ff9f7e; }
+    td.col-half  { color: #b07eff; }
+    td.col-mara  { color: var(--accent2); }
+
+    /* ── Load more buttons ── */
+    .loader-row td {
+      text-align: center;
+      padding: 0.6rem;
+      background: var(--surface);
+    }
+
+    .load-more-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      padding: 0.4rem 1.2rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .load-more-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Footer note ── */
+    .footnote {
+      margin-top: 1.25rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+
+    /* ── Fade edges on scroll ── */
+    .fade-top, .fade-bottom {
+      position: sticky;
+      left: 0;
+      right: 0;
+      height: 32px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .fade-top {
+      top: 0;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+    }
+    .fade-bottom {
+      bottom: 0;
+      background: linear-gradient(to top, var(--bg), transparent);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <h1>PACE CHART</h1>
+  </div>
+  <p class="subtitle">Running finish times by pace</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Pace unit</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btn-km" onclick="setUnit('km')">min/km</button>
+        <button class="toggle-btn" id="btn-mi" onclick="setUnit('mi')">min/mi</button>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<div class="table-wrap" id="tableWrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Pace</th>
+        <th class="col-5k">5K</th>
+        <th class="col-10k">10K</th>
+        <th class="col-half">Half</th>
+        <th class="col-mara">Marathon</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<p class="footnote">Half marathon = 21.097 km &nbsp;·&nbsp; Marathon = 42.195 km</p>
+
+<script>
+  const DISTANCES_KM = { "5K": 5, "10K": 10, "Half": 21.0975, "Marathon": 42.195 };
+  const COLS = ['col-5k','col-10k','col-half','col-mara'];
+  const KM_TO_MI = 1.60934;
+  const CENTER   = 300;  // 5:00/km in seconds
+  const MIN_PACE = 150;  // 2:30/km
+  const MAX_PACE = 600;  // 10:00/km
+  const LOAD_MORE = 30;  // rows added per click
+
+  let rangeMin = CENTER - 40;
+  let rangeMax = CENTER + 40;
+  let currentUnit = 'km';
+
+  /* ── Formatting ── */
+  function secsToDisplay(t) {
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = Math.round(t % 60);
+    return h > 0
+      ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+      : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function formatPace(secs) {
+    return `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+  }
+
+  function paceDisplay(secsPerKm) {
+    return currentUnit === 'km'
+      ? formatPace(secsPerKm)
+      : formatPace(Math.round(secsPerKm * KM_TO_MI));
+  }
+
+  /* ── Build a single data row ── */
+  function makeRow(secsPerKm) {
+    const tr = document.createElement('tr');
+    tr.dataset.pace = secsPerKm;
+    if (secsPerKm === CENTER)       tr.classList.add('highlighted');
+    else if (secsPerKm % 60 === 0)  tr.classList.add('minute-mark');
+
+    const td0 = document.createElement('td');
+    td0.textContent = paceDisplay(secsPerKm);
+    tr.appendChild(td0);
+
+    Object.values(DISTANCES_KM).forEach((dist, i) => {
+      const td = document.createElement('td');
+      td.className = COLS[i];
+      td.textContent = secsToDisplay(secsPerKm * dist);
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+
+  /* ── "Load more" button rows ── */
+  function makeLoaderRow(direction) {
+    const tr = document.createElement('tr');
+    tr.className = `loader-row loader-${direction}`;
+    tr.dataset.direction = direction;
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    const btn = document.createElement('button');
+    btn.className = 'load-more-btn';
+    btn.textContent = direction === 'top' ? '↑ Show faster paces' : '↓ Show slower paces';
+    btn.onclick = () => loadMore(direction);
+    td.appendChild(btn);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  /* ── Initial full render ── */
+  function buildTable() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    if (rangeMin > MIN_PACE) tbody.appendChild(makeLoaderRow('top'));
+
+    for (let s = rangeMin; s <= rangeMax; s++) {
+      tbody.appendChild(makeRow(s));
+    }
+
+    if (rangeMax < MAX_PACE) tbody.appendChild(makeLoaderRow('bottom'));
+  }
+
+  /* ── Load more rows without full rebuild ── */
+  function loadMore(direction) {
+    const tbody = document.getElementById('tableBody');
+
+    if (direction === 'top') {
+      const newMin = Math.max(MIN_PACE, rangeMin - LOAD_MORE);
+      // Remove old top loader
+      const oldLoader = tbody.querySelector('.loader-top');
+      if (oldLoader) oldLoader.remove();
+      // Prepend new rows - ascending loop with fixed anchor keeps correct order
+      const anchor = tbody.firstChild;
+      for (let s = newMin; s < rangeMin; s++) {
+        tbody.insertBefore(makeRow(s), anchor);
+      }
+      rangeMin = newMin;
+      // Add new top loader if still more to show
+      if (rangeMin > MIN_PACE) {
+        tbody.insertBefore(makeLoaderRow('top'), tbody.firstChild);
+      }
+    } else {
+      const newMax = Math.min(MAX_PACE, rangeMax + LOAD_MORE);
+      const oldLoader = tbody.querySelector('.loader-bottom');
+      if (oldLoader) oldLoader.remove();
+      for (let s = rangeMax + 1; s <= newMax; s++) {
+        tbody.appendChild(makeRow(s));
+      }
+      rangeMax = newMax;
+      if (rangeMax < MAX_PACE) tbody.appendChild(makeLoaderRow('bottom'));
+    }
+  }
+
+  /* ── Rebuild pace text only (on unit switch) ── */
+  function refreshPaceColumn() {
+    document.querySelectorAll('tbody tr[data-pace]').forEach(tr => {
+      tr.cells[0].textContent = paceDisplay(Number(tr.dataset.pace));
+    });
+  }
+
+  function setUnit(unit) {
+    currentUnit = unit;
+    document.getElementById('btn-km').classList.toggle('active', unit === 'km');
+    document.getElementById('btn-mi').classList.toggle('active', unit === 'mi');
+    refreshPaceColumn();
+  }
+
+  function scrollToCenter() {
+    const target = document.querySelector(`tbody tr[data-pace="${CENTER}"]`);
+    if (target) target.scrollIntoView({ block: 'center' });
+  }
+
+  buildTable();
+  scrollToCenter();
+</script>
+</body>
+</html>
