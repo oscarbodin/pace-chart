@@ -1,6 +1,5 @@
-# wrangler files
-.wrangler
-.dev.vars*
-!.dev.vars.example
-.env*
-!.env.example
+.venv*
+venv
+.env
+env
+__pycache__/
